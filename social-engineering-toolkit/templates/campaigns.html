@@ -1,0 +1,418 @@
+{% extends "base.html" %}
+
+{% block title %}Campaigns - Social Engineering Toolkit{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Security Campaigns</h1>
+                {% if session.is_admin %}
+                <button class="btn btn-primary" onclick="createCampaign()">
+                    <i class="fas fa-plus"></i> New Campaign
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        {% if campaigns %}
+            {% for campaign in campaigns %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card campaign-card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">{{ campaign[1] }}</h5>
+                        {% set status = campaign[9] if campaign|length > 9 else 'draft' %}
+                        <span class="badge bg-{{ 'success' if status == 'active' else 'warning' if status == 'draft' else 'info' }}">
+                            {{ status.title() if status else 'Draft' }}
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">
+                            <strong>Type:</strong> {{ campaign[2].title() }}<br>
+                            {% if campaign|length > 8 and campaign[8] %}
+                            <strong>Created:</strong> {{ campaign[8][:10] }}<br>
+                            {% endif %}
+                            {% if campaign|length > 10 and campaign[10] %}
+                            <strong>Creator:</strong> {{ campaign[10] }}
+                            {% endif %}
+                        </p>
+                        {% if campaign|length > 3 and campaign[3] %}
+                        <p class="card-text">{{ campaign[3] }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer d-flex gap-2">
+                        <button class="btn btn-outline-primary btn-sm flex-fill" onclick="viewCampaign({{ campaign[0] }})">
+                            <i class="fas fa-eye"></i> View
+                        </button>
+                        {% if session.is_admin %}
+                        <button class="btn btn-outline-danger btn-sm" onclick="deleteCampaign({{ campaign[0] }})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="alert alert-info text-center" role="alert">
+                    <h4 class="alert-heading">No Campaigns Yet</h4>
+                    <p>No security awareness campaigns have been created yet.</p>
+                    {% if session.is_admin %}
+                    <button class="btn btn-primary" onclick="createCampaign()">
+                        <i class="fas fa-plus"></i> Create Your First Campaign
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Demo Campaigns -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <h3>Demo Campaigns</h3>
+            <p class="text-muted">These are example campaigns to demonstrate the platform capabilities.</p>
+        </div>
+        
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card campaign-card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Banking Phishing Simulation</h5>
+                    <span class="badge bg-secondary">Demo</span>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">
+                        <strong>Type:</strong> Phishing<br>
+                        <strong>Target:</strong> All employees<br>
+                        <strong>Template:</strong> Fake banking alert
+                    </p>
+                    <p class="card-text">Simulates a phishing attack using fake banking security alerts to test employee awareness.</p>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-outline-primary btn-sm w-100" onclick="viewDemoCampaign('banking')">
+                        <i class="fas fa-eye"></i> View Demo
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card campaign-card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">IT Support Vishing</h5>
+                    <span class="badge bg-secondary">Demo</span>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">
+                        <strong>Type:</strong> Vishing<br>
+                        <strong>Target:</strong> Random selection<br>
+                        <strong>Scenario:</strong> Fake IT support call
+                    </p>
+                    <p class="card-text">Tests employee response to voice-based social engineering attacks.</p>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-outline-primary btn-sm w-100" onclick="viewDemoCampaign('vishing')">
+                        <i class="fas fa-eye"></i> View Demo
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card campaign-card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">USB Drop Attack</h5>
+                    <span class="badge bg-secondary">Demo</span>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">
+                        <strong>Type:</strong> Physical<br>
+                        <strong>Target:</strong> Office locations<br>
+                        <strong>Method:</strong> USB devices
+                    </p>
+                    <p class="card-text">Physical security test using infected USB devices placed around the office.</p>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-outline-primary btn-sm w-100" onclick="viewDemoCampaign('usb')">
+                        <i class="fas fa-eye"></i> View Demo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Campaign Details Modal -->
+<div class="modal fade" id="campaignModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="campaignModalTitle">Campaign Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="campaignContent">
+                <!-- Campaign content will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Campaign Modal -->
+<div class="modal fade" id="createCampaignModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Campaign</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createCampaignForm">
+                    <div class="mb-3">
+                        <label for="campaignName" class="form-label">Campaign Name</label>
+                        <input type="text" class="form-control" id="campaignName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="campaignType" class="form-label">Campaign Type</label>
+                        <select class="form-control" id="campaignType">
+                            <option value="phishing">Email Phishing</option>
+                            <option value="vishing">Voice Phishing (Vishing)</option>
+                            <option value="smishing">SMS Phishing (Smishing)</option>
+                            <option value="physical">Physical Security</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="campaignDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="campaignDescription" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="targetEmails" class="form-label">Target Emails (one per line)</label>
+                        <textarea class="form-control" id="targetEmails" rows="5" placeholder="user1@company.com\nuser2@company.com"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitCampaign()">Create Campaign</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function createCampaign() {
+    var modal = new bootstrap.Modal(document.getElementById('createCampaignModal'));
+    modal.show();
+}
+
+function submitCampaign() {
+    const campaignName = document.getElementById('campaignName').value;
+    const campaignType = document.getElementById('campaignType').value;
+    const campaignDescription = document.getElementById('campaignDescription').value;
+    const targetEmails = document.getElementById('targetEmails').value.split('\n').filter(email => email.trim());
+    
+    if (!campaignName || targetEmails.length === 0) {
+        alert('Please fill in all required fields');
+        return;
+    }
+    
+    fetch('/api/simulate_phishing', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            campaign_name: campaignName,
+            campaign_type: campaignType,
+            description: campaignDescription,
+            target_emails: targetEmails
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Campaign created successfully!');
+            bootstrap.Modal.getInstance(document.getElementById('createCampaignModal')).hide();
+            location.reload();
+        } else {
+            alert('Error creating campaign: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error creating campaign');
+    });
+}
+
+function viewCampaign(campaignId) {
+    // Fetch campaign details from server
+    document.getElementById('campaignModalTitle').textContent = 'Loading Campaign Details...';
+    document.getElementById('campaignContent').innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+    
+    fetch(`/api/campaigns/${campaignId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                document.getElementById('campaignModalTitle').textContent = 'Error';
+                document.getElementById('campaignContent').innerHTML = '<div class="alert alert-danger">Error: ' + data.error + '</div>';
+            } else {
+                displayCampaignDetails(data);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('campaignModalTitle').textContent = 'Error';
+            document.getElementById('campaignContent').innerHTML = '<div class="alert alert-danger">Failed to load campaign details. Please try again.</div>';
+        });
+    
+    var modal = new bootstrap.Modal(document.getElementById('campaignModal'));
+    modal.show();
+}
+
+function displayCampaignDetails(campaign) {
+    document.getElementById('campaignModalTitle').textContent = campaign.name;
+    
+    const content = `
+        <div class="campaign-details">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <h6>Campaign Information</h6>
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Type:</strong></td>
+                            <td>${campaign.type.charAt(0).toUpperCase() + campaign.type.slice(1)}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Status:</strong></td>
+                            <td><span class="badge bg-${campaign.status === 'active' ? 'success' : campaign.status === 'draft' ? 'warning' : 'info'}">${campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Created:</strong></td>
+                            <td>${new Date(campaign.created_at).toLocaleDateString()}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Creator:</strong></td>
+                            <td>${campaign.creator_name || 'Unknown'}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h6>Campaign Statistics</h6>
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Total Interactions:</strong></td>
+                            <td>${campaign.total_interactions}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Clicked Links:</strong></td>
+                            <td><span class="badge bg-${campaign.clicked_count > 0 ? 'danger' : 'success'}">${campaign.clicked_count}</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Submitted Data:</strong></td>
+                            <td><span class="badge bg-${campaign.submitted_count > 0 ? 'danger' : 'success'}">${campaign.submitted_count}</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Click Rate:</strong></td>
+                            <td>${campaign.total_interactions > 0 ? Math.round((campaign.clicked_count / campaign.total_interactions) * 100) : 0}%</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            
+            ${campaign.description ? `
+                <div class="mb-3">
+                    <h6>Description</h6>
+                    <p class="text-muted">${campaign.description}</p>
+                </div>
+            ` : ''}
+            
+            <div class="campaign-performance">
+                <h6>Performance Overview</h6>
+                <div class="progress mb-2" style="height: 25px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: ${campaign.total_interactions > 0 ? Math.round(((campaign.total_interactions - campaign.clicked_count) / campaign.total_interactions) * 100) : 100}%">
+                        Safe: ${campaign.total_interactions - campaign.clicked_count}
+                    </div>
+                    <div class="progress-bar bg-danger" role="progressbar" style="width: ${campaign.total_interactions > 0 ? Math.round((campaign.clicked_count / campaign.total_interactions) * 100) : 0}%">
+                        Clicked: ${campaign.clicked_count}
+                    </div>
+                </div>
+                <small class="text-muted">
+                    ${campaign.total_interactions > 0 ? 
+                        `${Math.round(((campaign.total_interactions - campaign.clicked_count) / campaign.total_interactions) * 100)}% of users did not click suspicious links` :
+                        'No interactions recorded yet'
+                    }
+                </small>
+            </div>
+            
+            <div class="mt-3">
+                <h6>Educational Impact</h6>
+                <div class="alert alert-info">
+                    <small>
+                        <i class="fas fa-info-circle"></i> 
+                        This campaign helps employees learn to identify ${campaign.type} attacks. 
+                        ${campaign.clicked_count > 0 ? 
+                            'Users who clicked received immediate educational feedback to improve their awareness.' :
+                            'All targeted users successfully avoided clicking suspicious content.'
+                        }
+                    </small>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('campaignContent').innerHTML = content;
+}
+
+function viewDemoCampaign(type) {
+    const content = {
+        'banking': `
+            <h5>Banking Phishing Simulation</h5>
+            <p><strong>Objective:</strong> Test employee awareness of banking phishing attempts</p>
+            <p><strong>Method:</strong> Simulated email from fake bank requesting urgent action</p>
+            <div class="alert alert-warning">
+                <strong>Sample Email Preview:</strong><br>
+                Subject: Urgent: Your account has been compromised<br><br>
+                Dear Customer,<br>
+                We detected suspicious activity on your account. Click here immediately to verify your identity...
+            </div>
+            <p><strong>Expected Behavior:</strong> Employees should report the email as suspicious and not click the link.</p>
+        `,
+        'vishing': `
+            <h5>IT Support Vishing Simulation</h5>
+            <p><strong>Objective:</strong> Test employee response to voice-based social engineering</p>
+            <p><strong>Method:</strong> Phone calls impersonating IT support requesting credentials</p>
+            <div class="alert alert-info">
+                <strong>Call Script:</strong><br>
+                "Hi, this is [Name] from IT support. We're experiencing a security issue and need to verify your login credentials to protect your account..."
+            </div>
+            <p><strong>Expected Behavior:</strong> Employees should hang up and verify through official IT channels.</p>
+        `,
+        'usb': `
+            <h5>USB Drop Attack Simulation</h5>
+            <p><strong>Objective:</strong> Test physical security awareness</p>
+            <p><strong>Method:</strong> USB devices placed in common areas with monitoring software</p>
+            <div class="alert alert-danger">
+                <strong>Scenario:</strong><br>
+                USB devices labeled "Payroll Information" or "Confidential" are placed in parking lots, break rooms, and entrances.
+            </div>
+            <p><strong>Expected Behavior:</strong> Employees should not insert unknown USB devices and report them to security.</p>
+        `
+    };
+    
+    document.getElementById('campaignModalTitle').textContent = 'Demo Campaign Details';
+    document.getElementById('campaignContent').innerHTML = content[type] || '<p>Demo not available.</p>';
+    
+    var modal = new bootstrap.Modal(document.getElementById('campaignModal'));
+    modal.show();
+}
+</script>
+{% endblock %}
+

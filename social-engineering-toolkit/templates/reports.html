@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+
+{% block title %}Reports - Social Engineering Toolkit{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">Security Awareness Reports</h1>
+        </div>
+    </div>
+    
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-envelope fa-2x mb-2"></i>
+                    <h3>{{ campaign_stats|length }}</h3>
+                    <p class="mb-0">Total Campaigns</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-users fa-2x mb-2"></i>
+                    <h3>{{ training_stats|length }}</h3>
+                    <p class="mb-0">Training Modules</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-shield-alt fa-2x mb-2"></i>
+                    <h3>{% set total_completed = training_stats|sum(attribute=2) %}{{ total_completed or 0 }}</h3>
+                    <p class="mb-0">Training Completed</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-chart-line fa-2x mb-2"></i>
+                    <h3>{% set total_clicked = campaign_stats|sum(attribute=2) %}{{ total_clicked or 0 }}</h3>
+                    <p class="mb-0">Phishing Clicks</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Campaign Performance -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Campaign Performance</h5>
+                    <button class="btn btn-outline-primary btn-sm" onclick="generateReport('campaigns')">
+                        <i class="fas fa-download"></i> Export Report
+                    </button>
+                </div>
+                <div class="card-body">
+                    {% if campaign_stats %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Campaign Name</th>
+                                    <th>Total Targets</th>
+                                    <th>Clicked Links</th>
+                                    <th>Submitted Data</th>
+                                    <th>Click Rate</th>
+                                    <th>Submission Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for campaign in campaign_stats %}
+                                <tr>
+                                    <td><strong>{{ campaign[0] }}</strong></td>
+                                    <td>{{ campaign[1] or 0 }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'danger' if (campaign[2] or 0) > 0 else 'success' }}">
+                                            {{ campaign[2] or 0 }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ 'danger' if (campaign[3] or 0) > 0 else 'success' }}">
+                                            {{ campaign[3] or 0 }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% set click_rate = ((campaign[2] or 0) / (campaign[1] or 1)) * 100 %}
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar bg-{{ 'danger' if click_rate > 20 else 'warning' if click_rate > 10 else 'success' }}" 
+                                                 role="progressbar" style="width: {{ click_rate }}%">
+                                                {{ "%.1f"|format(click_rate) }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% set submit_rate = ((campaign[3] or 0) / (campaign[1] or 1)) * 100 %}
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar bg-{{ 'danger' if submit_rate > 10 else 'warning' if submit_rate > 5 else 'success' }}" 
+                                                 role="progressbar" style="width: {{ submit_rate }}%">
+                                                {{ "%.1f"|format(submit_rate) }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No Campaign Data Available</h5>
+                        <p class="text-muted">Run some campaigns to see performance metrics here.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Training Progress -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Training Progress</h5>
+                    <button class="btn btn-outline-primary btn-sm" onclick="generateReport('training')">
+                        <i class="fas fa-download"></i> Export Report
+                    </button>
+                </div>
+                <div class="card-body">
+                    {% if training_stats %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Module Name</th>
+                                    <th>Enrolled</th>
+                                    <th>Completed</th>
+                                    <th>Completion Rate</th>
+                                    <th>Average Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for module in training_stats %}
+                                <tr>
+                                    <td><strong>{{ module[0] }}</strong></td>
+                                    <td>{{ module[1] or 0 }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if (module[2] or 0) > 0 else 'secondary' }}">
+                                            {{ module[2] or 0 }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% set completion_rate = ((module[2] or 0) / (module[1] or 1)) * 100 %}
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar bg-{{ 'success' if completion_rate > 80 else 'warning' if completion_rate > 50 else 'danger' }}" 
+                                                 role="progressbar" style="width: {{ completion_rate }}%">
+                                                {{ "%.1f"|format(completion_rate) }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if module[3] %}
+                                            <span class="badge bg-{{ 'success' if module[3] > 80 else 'warning' if module[3] > 60 else 'danger' }}">
+                                                {{ "%.1f"|format(module[3]) }}%
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-graduation-cap fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No Training Data Available</h5>
+                        <p class="text-muted">Create some training modules to see progress here.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Security Recommendations -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Security Recommendations</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-lightbulb"></i> High Priority</h6>
+                        <ul class="mb-0">
+                            <li>Implement mandatory phishing awareness training</li>
+                            <li>Conduct monthly security simulations</li>
+                            <li>Establish incident reporting procedures</li>
+                        </ul>
+                    </div>
+                    <div class="alert alert-warning">
+                        <h6><i class="fas fa-exclamation-triangle"></i> Medium Priority</h6>
+                        <ul class="mb-0">
+                            <li>Deploy email security tools</li>
+                            <li>Create security awareness newsletters</li>
+                            <li>Regular security policy updates</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Risk Assessment</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Overall Security Posture</label>
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar bg-warning" role="progressbar" style="width: 65%">
+                                65% - Moderate Risk
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Phishing Susceptibility</label>
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar bg-danger" role="progressbar" style="width: 25%">
+                                25% - High Risk
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Training Effectiveness</label>
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: 80%">
+                                80% - Good
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function generateReport(type) {
+    // This would connect to the main.js generateReport function
+    if (typeof window.generateReport === 'function') {
+        window.generateReport(type);
+    } else {
+        // Fallback for demo
+        alert(`Generating ${type} report... This would download a PDF report in a real implementation.`);
+    }
+}
+</script>
+{% endblock %}
+

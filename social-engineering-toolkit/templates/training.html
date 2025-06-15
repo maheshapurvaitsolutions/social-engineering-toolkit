@@ -1,0 +1,534 @@
+{% extends "base.html" %}
+
+{% block title %}Training - Social Engineering Toolkit{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">Security Awareness Training</h1>
+        </div>
+    </div>
+    
+    <div class="row">
+        {% if modules %}
+            {% for module in modules %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">{{ module[1] }}</h5>
+                        {% if progress.get(module[0], {}).get('completed') %}
+                            <span class="badge bg-success">Completed</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Not Started</span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">{{ module[2] }}</p>
+                        {% if progress.get(module[0], {}).get('score') %}
+                            <p class="mb-2"><strong>Score:</strong> {{ progress.get(module[0], {}).get('score') }}%</p>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-primary w-100" onclick="startModule({{ module[0] }}, '{{ module[1] }}')">Start Training</button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="alert alert-info" role="alert">
+                    <h4 class="alert-heading">No Training Modules Available</h4>
+                    <p>Training modules will be available soon. Check back later!</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Sample Training Module Cards -->
+    <div class="row">
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Phishing Awareness</h5>
+                    <span class="badge bg-secondary">Demo</span>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Learn to identify and avoid phishing attacks through email and web.</p>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check text-success"></i> Email red flags</li>
+                        <li><i class="fas fa-check text-success"></i> URL verification</li>
+                        <li><i class="fas fa-check text-success"></i> Reporting procedures</li>
+                    </ul>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-primary w-100" onclick="startDemoModule('phishing')">Start Training</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Social Engineering</h5>
+                    <span class="badge bg-secondary">Demo</span>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Understand common social engineering tactics and how to defend against them.</p>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check text-success"></i> Pretexting techniques</li>
+                        <li><i class="fas fa-check text-success"></i> Authority manipulation</li>
+                        <li><i class="fas fa-check text-success"></i> Urgency tactics</li>
+                    </ul>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-primary w-100" onclick="startDemoModule('social')">Start Training</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Password Security</h5>
+                    <span class="badge bg-secondary">Demo</span>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Best practices for creating and managing secure passwords.</p>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check text-success"></i> Strong password creation</li>
+                        <li><i class="fas fa-check text-success"></i> Multi-factor authentication</li>
+                        <li><i class="fas fa-check text-success"></i> Password managers</li>
+                    </ul>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-primary w-100" onclick="startDemoModule('password')">Start Training</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Training Modal -->
+<div class="modal fade" id="trainingModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="trainingModalTitle">Training Module</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="trainingContent">
+                <!-- Training content will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="nextButton" onclick="nextSection()">Next</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentModule = null;
+let currentSection = 0;
+
+function startModule(moduleId, moduleName) {
+    currentModule = moduleId;
+    document.getElementById('trainingModalTitle').textContent = moduleName;
+    
+    // Load module content from server
+    fetch(`/api/training/modules/${moduleId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                document.getElementById('trainingContent').innerHTML = '<p class="text-danger">Error loading module: ' + data.error + '</p>';
+            } else {
+                loadRealModuleContent(data);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading module:', error);
+            document.getElementById('trainingContent').innerHTML = '<p class="text-danger">Failed to load training content. Please try again.</p>';
+        });
+    
+    var modal = new bootstrap.Modal(document.getElementById('trainingModal'));
+    modal.show();
+}
+
+function loadRealModuleContent(moduleData) {
+    const content = `
+        <div class="training-section">
+            <div class="mb-4">
+                ${moduleData.content || '<p>No content available for this module.</p>'}
+            </div>
+            
+            <div class="quiz-section mt-4">
+                <h5>Quick Quiz</h5>
+                <div class="quiz-questions" id="quizQuestions-${moduleData.id}">
+                    <!-- Quiz questions will be loaded here -->
+                </div>
+                <div class="quiz-results mt-3" id="quizResults-${moduleData.id}" style="display: none;">
+                    <!-- Quiz results will be shown here -->
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('trainingContent').innerHTML = content;
+    loadQuizQuestions(moduleData.id);
+    
+    document.getElementById('nextButton').style.display = 'inline-block';
+    document.getElementById('nextButton').textContent = 'Take Quiz';
+    document.getElementById('nextButton').setAttribute('onclick', `startQuiz(${moduleData.id})`);
+}
+
+function loadQuizQuestions(moduleId) {
+    // Sample quiz questions based on module
+    const quizData = {
+        1: { // Phishing Awareness
+            questions: [
+                {
+                    question: "Which of the following is a red flag for phishing emails?",
+                    options: ["Professional formatting", "Urgent action required", "Personalized greeting"],
+                    correct: 1
+                },
+                {
+                    question: "What should you do if you receive a suspicious email?",
+                    options: ["Click the link to verify", "Reply with your information", "Report it to IT security"],
+                    correct: 2
+                }
+            ]
+        },
+        2: { // Password Security
+            questions: [
+                {
+                    question: "Which password is stronger?",
+                    options: ["password123", "Tr0ub4dor&3", "MyPassword"],
+                    correct: 1
+                },
+                {
+                    question: "How many different passwords should you use?",
+                    options: ["One for everything", "One for each account", "Two or three total"],
+                    correct: 1
+                }
+            ]
+        },
+        3: { // Social Engineering
+            questions: [
+                {
+                    question: "Someone calls claiming to be from IT and asks for your password. What should you do?",
+                    options: ["Provide the password immediately", "Hang up and call IT through official channels", "Ask for their employee ID only"],
+                    correct: 1
+                },
+                {
+                    question: "What is pretexting?",
+                    options: ["Writing before texting", "Creating false scenarios to gain trust", "Previewing text messages"],
+                    correct: 1
+                }
+            ]
+        }
+    };
+    
+    const quiz = quizData[moduleId] || {
+        questions: [
+            {
+                question: "What is the most important rule for cybersecurity?",
+                options: ["Trust everyone", "Verify before you trust", "Ignore all warnings"],
+                correct: 1
+            }
+        ]
+    };
+    
+    window.currentQuiz = quiz;
+    window.currentModuleId = moduleId;
+}
+
+function startQuiz(moduleId) {
+    if (!window.currentQuiz) {
+        loadQuizQuestions(moduleId);
+    }
+    
+    const quiz = window.currentQuiz;
+    let quizHtml = '<h6>Test Your Knowledge:</h6>';
+    
+    quiz.questions.forEach((q, index) => {
+        quizHtml += `
+            <div class="question-block mb-4 p-3 border rounded">
+                <p class="fw-bold">${index + 1}. ${q.question}</p>
+                ${q.options.map((option, optIndex) => `
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="question${index}" id="q${index}o${optIndex}" value="${optIndex}">
+                        <label class="form-check-label" for="q${index}o${optIndex}">
+                            ${option}
+                        </label>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    });
+    
+    quizHtml += '<button class="btn btn-success" onclick="submitQuiz()">Submit Quiz</button>';
+    
+    document.getElementById(`quizQuestions-${moduleId}`).innerHTML = quizHtml;
+    document.getElementById('nextButton').style.display = 'none';
+}
+
+function submitQuiz() {
+    const quiz = window.currentQuiz;
+    const moduleId = window.currentModuleId;
+    let score = 0;
+    let totalQuestions = quiz.questions.length;
+    let results = [];
+    
+    quiz.questions.forEach((q, index) => {
+        const selectedOption = document.querySelector(`input[name="question${index}"]:checked`);
+        if (selectedOption) {
+            const selectedValue = parseInt(selectedOption.value);
+            const isCorrect = selectedValue === q.correct;
+            if (isCorrect) score++;
+            
+            results.push({
+                question: q.question,
+                selected: q.options[selectedValue],
+                correct: q.options[q.correct],
+                isCorrect: isCorrect
+            });
+        } else {
+            results.push({
+                question: q.question,
+                selected: 'No answer',
+                correct: q.options[q.correct],
+                isCorrect: false
+            });
+        }
+    });
+    
+    const percentage = Math.round((score / totalQuestions) * 100);
+    
+    // Show results
+    let resultsHtml = `
+        <div class="alert alert-${percentage >= 70 ? 'success' : 'warning'}">
+            <h6>Quiz Results: ${score}/${totalQuestions} (${percentage}%)</h6>
+            ${percentage >= 70 ? 
+                '<p>Congratulations! You passed the quiz.</p>' : 
+                '<p>Please review the material and try again to improve your score.</p>'
+            }
+        </div>
+        <div class="results-details">
+    `;
+    
+    results.forEach((result, index) => {
+        resultsHtml += `
+            <div class="mb-3 p-2 border rounded ${result.isCorrect ? 'border-success bg-light' : 'border-danger bg-light'}">
+                <p class="mb-1"><strong>Q${index + 1}:</strong> ${result.question}</p>
+                <p class="mb-1"><strong>Your answer:</strong> ${result.selected}</p>
+                <p class="mb-1"><strong>Correct answer:</strong> ${result.correct}</p>
+                <span class="badge bg-${result.isCorrect ? 'success' : 'danger'}">
+                    ${result.isCorrect ? 'Correct' : 'Incorrect'}
+                </span>
+            </div>
+        `;
+    });
+    
+    resultsHtml += '</div>';
+    
+    // Only mark as complete if score is 70% or higher
+    if (percentage >= 70) {
+        resultsHtml += '<button class="btn btn-primary" onclick="completeTraining(' + percentage + ')">Complete Training</button>';
+    } else {
+        resultsHtml += '<button class="btn btn-warning" onclick="retakeQuiz()">Retake Quiz</button>';
+    }
+    
+    document.getElementById(`quizResults-${moduleId}`).innerHTML = resultsHtml;
+    document.getElementById(`quizResults-${moduleId}`).style.display = 'block';
+    document.getElementById(`quizQuestions-${moduleId}`).style.display = 'none';
+}
+
+function retakeQuiz() {
+    const moduleId = window.currentModuleId;
+    document.getElementById(`quizResults-${moduleId}`).style.display = 'none';
+    document.getElementById(`quizQuestions-${moduleId}`).style.display = 'block';
+    
+    // Clear previous answers
+    document.querySelectorAll('input[type="radio"]').forEach(radio => {
+        radio.checked = false;
+    });
+}
+
+function startDemoModule(type) {
+    document.getElementById('trainingModalTitle').textContent = getDemoTitle(type);
+    loadDemoContent(type);
+    
+    var modal = new bootstrap.Modal(document.getElementById('trainingModal'));
+    modal.show();
+}
+
+function getDemoTitle(type) {
+    const titles = {
+        'phishing': 'Phishing Awareness Training',
+        'social': 'Social Engineering Defense',
+        'password': 'Password Security Best Practices'
+    };
+    return titles[type] || 'Training Module';
+}
+
+function loadDemoContent(type) {
+    const content = {
+        'phishing': `
+            <div class="training-section">
+                <h4>What is Phishing?</h4>
+                <p>Phishing is a cybercrime where attackers impersonate legitimate organizations to steal sensitive information.</p>
+                
+                <h5>Common Red Flags:</h5>
+                <ul>
+                    <li>Urgent or threatening language</li>
+                    <li>Generic greetings ("Dear Customer")</li>
+                    <li>Suspicious sender addresses</li>
+                    <li>Unexpected attachments or links</li>
+                    <li>Poor grammar and spelling</li>
+                </ul>
+                
+                <div class="alert alert-warning">
+                    <strong>Remember:</strong> When in doubt, verify independently through official channels.
+                </div>
+                
+                <h5>Quiz Question:</h5>
+                <p>Which of the following is a red flag for phishing emails?</p>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="quiz1" id="q1a" value="a">
+                    <label class="form-check-label" for="q1a">Professional formatting</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="quiz1" id="q1b" value="b">
+                    <label class="form-check-label" for="q1b">Urgent action required</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="quiz1" id="q1c" value="c">
+                    <label class="form-check-label" for="q1c">Personalized greeting</label>
+                </div>
+            </div>
+        `,
+        'social': `
+            <div class="training-section">
+                <h4>Social Engineering Tactics</h4>
+                <p>Social engineering exploits human psychology to manipulate people into divulging information or performing actions.</p>
+                
+                <h5>Common Techniques:</h5>
+                <ul>
+                    <li><strong>Pretexting:</strong> Creating false scenarios to gain trust</li>
+                    <li><strong>Authority:</strong> Impersonating figures of authority</li>
+                    <li><strong>Urgency:</strong> Creating time pressure to bypass thinking</li>
+                    <li><strong>Familiarity:</strong> Using personal information to build rapport</li>
+                </ul>
+                
+                <div class="alert alert-info">
+                    <strong>Defense:</strong> Always verify requests through independent channels.
+                </div>
+                
+                <h5>Scenario:</h5>
+                <p>You receive a call from someone claiming to be from IT support, asking for your password to "fix your account." What should you do?</p>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="quiz2" id="q2a" value="a">
+                    <label class="form-check-label" for="q2a">Provide the password immediately</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="quiz2" id="q2b" value="b">
+                    <label class="form-check-label" for="q2b">Hang up and call IT through official channels</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="quiz2" id="q2c" value="c">
+                    <label class="form-check-label" for="q2c">Ask for their employee ID only</label>
+                </div>
+            </div>
+        `,
+        'password': `
+            <div class="training-section">
+                <h4>Password Security</h4>
+                <p>Strong passwords are your first line of defense against unauthorized access.</p>
+                
+                <h5>Password Best Practices:</h5>
+                <ul>
+                    <li>Use at least 12 characters</li>
+                    <li>Include uppercase, lowercase, numbers, and symbols</li>
+                    <li>Avoid personal information</li>
+                    <li>Use unique passwords for each account</li>
+                    <li>Enable multi-factor authentication</li>
+                </ul>
+                
+                <div class="alert alert-success">
+                    <strong>Tip:</strong> Use a password manager to generate and store unique passwords.
+                </div>
+                
+                <h5>Which password is stronger?</h5>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="quiz3" id="q3a" value="a">
+                    <label class="form-check-label" for="q3a">password123</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="quiz3" id="q3b" value="b">
+                    <label class="form-check-label" for="q3b">Tr0ub4dor&3</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="quiz3" id="q3c" value="c">
+                    <label class="form-check-label" for="q3c">MyPassword</label>
+                </div>
+            </div>
+        `
+    };
+    
+    document.getElementById('trainingContent').innerHTML = content[type] || '<p>Training content not available.</p>';
+    document.getElementById('nextButton').style.display = 'inline-block';
+    document.getElementById('nextButton').textContent = 'Complete Training';
+    document.getElementById('nextButton').setAttribute('onclick', 'completeTraining()');
+}
+
+function completeTraining(score = 100) {
+    const moduleId = window.currentModuleId || currentModule;
+    
+    if (moduleId) {
+        // Save training completion to server
+        fetch('/api/training/complete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                module_id: moduleId,
+                score: score
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Training completed successfully! Score: ' + score + '%');
+                bootstrap.Modal.getInstance(document.getElementById('trainingModal')).hide();
+                // Refresh the page to update progress indicators
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                alert('Error saving progress: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error saving training progress');
+        });
+    } else {
+        alert('Training completed! Great job on improving your security awareness.');
+        bootstrap.Modal.getInstance(document.getElementById('trainingModal')).hide();
+    }
+}
+
+function loadModuleContent(moduleId) {
+    // In a real implementation, this would fetch module content from the server
+    document.getElementById('trainingContent').innerHTML = '<p>Loading training content...</p>';
+}
+
+function nextSection() {
+    // Handle navigation between training sections
+    currentSection++;
+}
+</script>
+{% endblock %}
+
